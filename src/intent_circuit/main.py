@@ -26,8 +26,31 @@ def evaluate_sequence(actions: list[AgentAction]) -> tuple[str, str]:
     return "ALLOW", "No dangerous action sequence was detected."
 
 
+def print_result(
+    scenario_name: str,
+    actions: list[AgentAction],
+) -> None:
+    decision, reason = evaluate_sequence(actions)
+
+    print(f"\nScenario: {scenario_name}")
+    print(f"Decision: {decision}")
+    print(f"Reason: {reason}")
+
+
 def main() -> None:
-    actions = [
+    safe_actions = [
+        AgentAction(
+            name="read_file",
+            resource="public_report.pdf",
+        ),
+        AgentAction(
+            name="send_file",
+            resource="public_report.pdf",
+            destination="external",
+        ),
+    ]
+
+    risky_actions = [
         AgentAction(
             name="read_file",
             resource="employee_salaries.csv",
@@ -40,10 +63,8 @@ def main() -> None:
         ),
     ]
 
-    decision, reason = evaluate_sequence(actions)
-
-    print(f"Decision: {decision}")
-    print(f"Reason: {reason}")
+    print_result("Safe file sharing", safe_actions)
+    print_result("Sensitive data exfiltration", risky_actions)
 
 
 if __name__ == "__main__":
