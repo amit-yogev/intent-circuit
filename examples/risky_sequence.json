@@ -1,0 +1,15 @@
+{
+  "scenario_name": "Potential employee data leak",
+  "actions": [
+    {
+      "name": "read_file",
+      "resource": "employee_salaries.csv",
+      "sensitive": true
+    },
+    {
+      "name": "send_file",
+      "resource": "employee_salaries.csv",
+      "destination": "external"
+    }
+  ]
+}
