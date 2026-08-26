@@ -37,7 +37,44 @@ The current risk engine can:
 - Deleting a production file: `APPROVAL`
 - Reading sensitive data and sending it externally: `BLOCK`
 
+## Configurable security policy
+
+IntentCircuit loads its risk scores and decision thresholds from:
+
+```text
+config/default_policy.json
+```
+
+Organizations can customize the security policy without modifying the
+evaluation engine. For example, increasing the `delete_file` score from
+`60` to `80` changes the decision from `APPROVAL` to `BLOCK`.
+
+Example policy:
+
+```json
+{
+  "scores": {
+    "read_sensitive": 30,
+    "send_external": 20,
+    "delete_file": 60,
+    "sensitive_data_exfiltration": 100
+  },
+  "thresholds": {
+    "warn": 25,
+    "approval": 50,
+    "block": 75
+  }
+}
+```
+
 ## Run the demonstration
 
 ```powershell
-python src/intent_circuit/main.py
+python -m src.intent_circuit.main
+```
+
+## Run the automated tests
+
+```powershell
+pytest -v
+```

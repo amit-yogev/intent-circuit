@@ -1,0 +1,13 @@
+{
+  "scores": {
+    "read_sensitive": 30,
+    "send_external": 20,
+    "delete_file": 60,
+    "sensitive_data_exfiltration": 100
+  },
+  "thresholds": {
+    "warn": 25,
+    "approval": 50,
+    "block": 75
+  }
+}
