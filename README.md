@@ -78,3 +78,27 @@ python -m src.intent_circuit.main
 ```powershell
 pytest -v
 ```
+## Analyze an external action sequence
+
+IntentCircuit can analyze AI agent actions provided in a JSON file.
+
+Example input:
+
+```text
+examples/risky_sequence.json
+```
+
+Run the analysis:
+
+```powershell
+python -m src.intent_circuit.runner --input examples/risky_sequence.json
+```
+
+The command prints the security decision and creates a detailed report at:
+
+```text
+reports/latest_report.json
+```
+
+The report contains the original actions, risk score, decision, explanation,
+and generation time.
