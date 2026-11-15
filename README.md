@@ -102,3 +102,25 @@ reports/latest_report.json
 
 The report contains the original actions, risk score, decision, explanation,
 and generation time.
+
+## Error handling
+
+IntentCircuit fails closed: when the input is invalid or unknown, it stops and
+explains the problem instead of guessing.
+
+| Problem | Example message |
+|---|---|
+| Missing scenario file | `Error: Scenario file not found: examples/missing.json` |
+| Broken JSON | `Error: Scenario file is not valid JSON: ... (line 3, column 5)` |
+| Unknown action | `Error: Action #2 has an unknown action name: 'upload_to_cloud'` |
+| Missing field | `Error: Action #1 is missing a 'resource'.` |
+| Invalid policy | `Error: Policy thresholds must be in order: warn < approval < block.` |
+
+The command exits with code `1` on any of these errors, so other tools and CI
+pipelines can detect the failure.
+
+Try it:
+
+```powershell
+python -m src.intent_circuit.runner --input examples/unknown_action.json
+```

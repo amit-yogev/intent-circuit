@@ -1,0 +1,15 @@
+{
+  "scenario_name": "Agent uses an unknown tool",
+  "actions": [
+    {
+      "name": "read_file",
+      "resource": "employee_salaries.csv",
+      "sensitive": true
+    },
+    {
+      "name": "upload_to_cloud",
+      "resource": "employee_salaries.csv",
+      "destination": "external"
+    }
+  ]
+}
