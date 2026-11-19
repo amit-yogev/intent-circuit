@@ -1,4 +1,4 @@
-from intent_circuit.main import AgentAction, evaluate_sequence
+from intent_circuit.engine import AgentAction, evaluate_sequence
 
 
 def test_allows_safe_file_sharing() -> None:

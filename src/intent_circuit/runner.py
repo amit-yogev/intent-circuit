@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import IntentCircuitError, InvalidScenarioError, ScenarioFileError
-from .main import AgentAction, evaluate_sequence
+from .engine import AgentAction, default_policy_path, evaluate_sequence
 from .policy import SecurityPolicy, load_policy
 
 KNOWN_ACTIONS = {"read_file", "send_file", "delete_file"}
@@ -143,7 +143,7 @@ def main() -> None:
     parser.add_argument(
         "--policy",
         type=Path,
-        default=Path("config/default_policy.json"),
+        default=default_policy_path(),
         help="Path to the security policy JSON file.",
     )
     parser.add_argument(

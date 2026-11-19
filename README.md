@@ -1,5 +1,7 @@
 # IntentCircuit
 
+![Tests](https://github.com/amit-yogev/intent-circuit/actions/workflows/tests.yml/badge.svg)
+
 Security and evaluation platform for detecting risky multi-step behavior in AI agents.
 
 ## The problem
@@ -124,3 +126,27 @@ Try it:
 ```powershell
 python -m src.intent_circuit.runner --input examples/unknown_action.json
 ```
+
+## Project structure
+
+| File | Responsibility |
+|---|---|
+| `src/intent_circuit/engine.py` | Risk engine: evaluates an action sequence and returns a decision |
+| `src/intent_circuit/policy.py` | Loads and validates the security policy |
+| `src/intent_circuit/runner.py` | Command-line tool: reads a scenario file and saves a report |
+| `src/intent_circuit/errors.py` | Error types for invalid scenarios and policies |
+| `src/intent_circuit/main.py` | Demonstration scenarios |
+
+## Configuration
+
+By default, IntentCircuit uses `config/default_policy.json`. To use a different
+policy without changing any code, set an environment variable:
+
+```powershell
+$env:INTENTCIRCUIT_POLICY_PATH = "config/my_policy.json"
+```
+
+## Continuous integration
+
+Every pull request runs the full test suite automatically on GitHub Actions
+(`.github/workflows/tests.yml`).
