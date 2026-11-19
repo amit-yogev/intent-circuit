@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from intent_circuit.main import AgentAction, evaluate_sequence
+from intent_circuit.engine import AgentAction, evaluate_sequence
 from intent_circuit.policy import load_policy
 
 
