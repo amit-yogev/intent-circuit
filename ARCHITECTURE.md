@@ -1,0 +1,153 @@
+# IntentCircuit Architecture
+
+## 1. Purpose
+
+IntentCircuit is a security layer that sits between an AI coding agent and its
+tools. It evaluates the sequence of actions an agent performs and decides
+whether to allow, warn, require human approval, or block.
+
+Long-term focus: detecting agents that try to leave their sandbox, including
+indirect escapes where the agent writes a file that an unsandboxed host
+component later executes.
+
+## 2. Requirements
+
+### In scope (current version)
+
+- Represent agent actions: name, resource, sensitivity, destination
+- Evaluate an ordered sequence of actions and remember earlier actions
+- Calculate a risk score from 0 to 100 and map it to `ALLOW`, `WARN`, `APPROVAL` or `BLOCK`
+- Load scores and thresholds from a JSON policy; the policy path is configurable through an environment variable
+- Read scenarios from JSON and write a JSON report
+- Reject invalid or unknown input (fail closed) with a clear message and exit code 1
+- Run the automated tests on every pull request
+
+### Planned (see the roadmap)
+
+- New actions: `write_file`, `run_command` with arguments, `network_request`
+- A catalog of execution-trigger files
+- Tracking which files the agent itself wrote (provenance)
+- Real-time, step-by-step decisions through an agent hook
+- A benchmark against sandbox-escape techniques documented in 2026
+
+### Out of scope
+
+- Replacing the sandbox (Docker, gVisor, microVMs). IntentCircuit is an extra layer, not isolation.
+- Kernel-level monitoring (system calls, eBPF). Runtime tools such as Falco already cover this.
+- Detecting prompt injection in text. IntentCircuit judges actions, not prompts.
+- A graphical dashboard.
+
+## 3. Entities
+
+| Entity | What it represents | Where |
+|---|---|---|
+| `AgentAction` | One step an agent wants to perform | `engine.py` |
+| `SecurityPolicy` | The scores and thresholds an organization chooses | `policy.py` |
+| Scenario | A named, ordered list of actions | loaded by `runner.py` from JSON |
+| Decision | Decision level, risk score and reason | returned by `evaluate_sequence` |
+| Report | Scenario, actions, decision and timestamp | written by `runner.py` |
+| `IntentCircuitError` and subclasses | Expected, explainable failures | `errors.py` |
+
+## 4. Relationships
+
+- A scenario contains one or more actions, in order. Order matters: the same actions in a different order can carry a different risk.
+- One policy is used for the whole scenario.
+- Evaluating a scenario produces exactly one decision; the report wraps it with the original actions.
+- An error stops the evaluation; no partial report is written.
+
+## 5. Class and module diagram
+
+```mermaid
+classDiagram
+  class AgentAction {
+    +str name
+    +str resource
+    +bool sensitive
+    +str destination
+  }
+  class SecurityPolicy {
+    +int read_sensitive_score
+    +int send_external_score
+    +int delete_file_score
+    +int sensitive_data_exfiltration_score
+    +int warn_threshold
+    +int approval_threshold
+    +int block_threshold
+  }
+  class engine {
+    +evaluate_sequence(actions, policy) tuple
+    +decision_from_score(score, policy) str
+    +default_policy_path() Path
+  }
+  class policy {
+    +load_policy(path) SecurityPolicy
+  }
+  class runner {
+    +load_scenario(path) tuple
+    +analyze_scenario(input, policy) dict
+    +save_report(report, path)
+  }
+  class IntentCircuitError
+  class ScenarioFileError
+  class InvalidScenarioError
+  class InvalidPolicyError
+  IntentCircuitError <|-- ScenarioFileError
+  IntentCircuitError <|-- InvalidScenarioError
+  IntentCircuitError <|-- InvalidPolicyError
+  runner --> engine : evaluates with
+  runner --> policy : loads
+  engine --> policy : loads default
+  engine ..> AgentAction : reads
+  engine ..> SecurityPolicy : uses
+  policy ..> SecurityPolicy : creates
+```
+
+## 6. Data flow
+
+1. `runner` reads the scenario JSON and validates every action. Unknown or malformed actions are rejected.
+2. `policy` loads and validates the security policy.
+3. `engine` walks through the actions in order and remembers which sensitive resources were read.
+4. The score is capped at 100 and mapped to a decision using the policy thresholds.
+5. `runner` saves the report to `reports/latest_report.json`.
+
+## 7. Decisions and trade-offs
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Rules and policy, not a machine-learning model | Security decisions must be predictable, explainable and testable | Misses patterns that no rule describes; rules need maintenance |
+| Analyze the sequence, not single actions | Real attacks combine steps that are each allowed | The engine must keep state across actions |
+| Fail closed on unknown actions | A guard must not approve what it does not understand | New legitimate tools are blocked until they are added |
+| Four decision levels | Blocking everything makes the agent useless; allowing everything is unsafe | Thresholds need tuning for each organization |
+| Policy in JSON, path from an environment variable | Each organization sets its own risk level without code changes | Policy files must be validated (done in `policy.py`) |
+| A confirmed leak sets the score to the maximum instead of adding to it | A confirmed leak is always the worst case, whatever came before | Less detail between very risky sequences |
+| Frozen dataclasses for actions | The action history cannot be changed after the fact | Changing data requires creating new objects |
+| Standard library only at runtime | Easy to install and audit; small attack surface | More code written by hand, such as validation |
+
+## 8. Threat model: sandbox escape
+
+**Assets:** the host machine, credentials (cloud metadata, tokens), the repository and the CI pipeline.
+
+**Attacker:** a coding agent whose instructions were manipulated, for example by text hidden in a README or an issue, or an agent that pursues its goal too aggressively.
+
+**Escape paths documented in July 2026:**
+
+| Path | Example | Why ordinary permissions miss it |
+|---|---|---|
+| Execution-trigger file | The agent writes `.vscode/tasks.json`; the editor runs it outside the sandbox | Writing files in the project is allowed |
+| Git configuration | `core.fsmonitor` or hooks run a command | `git` is on the safe-command list |
+| Agent hook configuration | A workspace hook file runs a command unsandboxed (CVE-2026-48124) | The file looks like ordinary configuration |
+| Python environment | The agent modifies a `.venv` interpreter that an unsandboxed extension runs | It is a normal development file |
+| Docker socket | Access to `/var/run/docker.sock` gives control of the host | The socket is reachable from the sandbox |
+| Cloud metadata | A request to `169.254.169.254` returns credentials | It looks like an ordinary network request |
+
+**What IntentCircuit sees:** every action the agent asks its tools to perform, with its arguments and its order.
+
+**What it does not see:** what a process does after it starts, actions that bypass the tool interface, and kernel-level activity. These remain the job of the sandbox and of runtime monitoring.
+
+## 9. Related work
+
+- **Invariant Guardrails:** open-source rules over sequences of tool calls. IntentCircuit focuses on escape intent, especially indirect escape through execution-trigger files.
+- **Pillar Security:** commercial monitoring of the handoff between agent-written files and the host components that run them.
+- **Sandboxes** (Docker, gVisor, Firecracker): isolation. IntentCircuit is a layer above them, not a replacement.
+
+Sources: [Pillar Security – The week of sandbox escapes](https://pillar.security/blog/the-week-of-sandbox-escapes) · [Docker – Agent security is a systems problem](https://www.docker.com/blog/ai-agent-security-systems-problem/) · [Invariant Guardrails](https://github.com/invariantlabs-ai/invariant)
