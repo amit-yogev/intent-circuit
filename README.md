@@ -2,7 +2,7 @@
 
 ![Tests](https://github.com/amit-yogev/intent-circuit/actions/workflows/tests.yml/badge.svg)
 
-**A security layer that watches what AI coding agents do, and stops them when a
+**A security layer that watches what AI coding agents do, and decides when to stop them, when a
 sequence of allowed actions adds up to something dangerous.**
 
 ## Why
@@ -47,10 +47,12 @@ Input (`examples/risky_sequence.json`):
 Output:
 
 ```text
+Analysis complete 
 Scenario: Potential employee data leak
 Risk score: 100/100
 Decision: BLOCK
 Reason: Sensitive resource was read: employee_salaries.csv. Sensitive data was read and then sent externally.
+Report saved to: reports\latest_report.json
 ```
 
 ## Quick start
