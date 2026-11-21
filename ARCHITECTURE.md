@@ -179,6 +179,10 @@ classDiagram
 | Addresses are also checked inside command arguments | Agents usually reach the network with `curl`, not with a separate network action | Only addresses that appear as arguments are seen; an address built inside a script is not |
 | Reconnaissance (`ls -la /`) adds no risk on its own | Agents explore their environment all the time for legitimate reasons | Early warning signs are not scored |
 | The benchmark includes variants and ordinary work, not only documented escapes | Testing only the cases the rules were written for proves little | The reported numbers are lower |
+| The benchmark is compared with a name-only permission list | A number means little without a baseline; this is the control the 2026 escapes went through | The baseline is our own simple model of such a list |
+| Held-out cases are committed before fixes, and fixes come only from the variants | The Git history proves the held-out cases were not used to write rules | The honest number is low (3 of 9) |
+| Addresses are written one way before matching (`2852039166` becomes `169.254.169.254`) | The same address has many spellings | Only decimal and standard IPv6 forms are handled so far |
+| `env` is unwrapped and the program it starts is judged | `env VAR=... git` runs Git | Other wrappers (`nohup`, `sh -c`) are not unwrapped yet |
 | Known misses and false alarms are listed in the tests | A new miss, or a fixed one, changes the list and must be noted on purpose | The list must be updated with every improvement |
 
 ## 8. Threat model: sandbox escape

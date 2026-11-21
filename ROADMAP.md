@@ -26,9 +26,9 @@ A live demo is only convincing once the detection has been measured.
 ## Phase 2: Prove it with numbers
 
 - [x] One scenario per documented escape technique, plus ordinary developer work
-- [ ] Measure techniques detected and safe actions blocked by mistake
-- [ ] Compare with a command allowlist that checks names only
-- [ ] Publish the results, including what is not detected and why
+- [x] Measure techniques detected and safe actions blocked by mistake
+- [x] Compare with a command allowlist that checks names only
+- [x] Publish the results, including what is not detected and why
 
 ## Phase 3: Real-time guard
 

@@ -83,6 +83,12 @@
       "reason": "setuid makes a program run with its owner's rights",
       "score": 80
     },
+        {
+      "program": "chmod",
+      "argument": "[2-7][0-7][0-7][0-7]",
+      "reason": "a number that sets setuid or setgid makes a program run with its owner's rights",
+      "score": 80
+    },
     {
       "program": "sudo",
       "argument": "*",
@@ -99,6 +105,11 @@
   "network_rules": [
     {
       "host": "169.254.169.254",
+      "reason": "the cloud metadata service hands out credentials",
+      "score": 90
+    },
+        {
+      "host": "fd00:ec2::254",
       "reason": "the cloud metadata service hands out credentials",
       "score": 90
     },
