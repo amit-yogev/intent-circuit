@@ -1,4 +1,5 @@
 import json
+import ipaddress
 import posixpath
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
@@ -34,9 +35,21 @@ def host_of(text: str) -> str:
         cleaned = "//" + cleaned
 
     try:
-        return urlsplit(cleaned).hostname or ""
+        host = urlsplit(cleaned).hostname or ""
     except ValueError:
         return ""
+
+    return canonical_host(host)
+
+
+def canonical_host(host: str) -> str:
+    try:
+        if host.isdigit():
+            return str(ipaddress.IPv4Address(int(host)))
+
+        return str(ipaddress.ip_address(host))
+    except ValueError:
+        return host
 
 
 @dataclass(frozen=True)

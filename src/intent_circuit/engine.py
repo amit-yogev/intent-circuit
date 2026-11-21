@@ -19,7 +19,9 @@ KNOWN_ACTIONS = frozenset(
         "network_request",
     }
 )
-
+# Programs that start another program, such as `env VAR=value git status`.
+# The rules judge the program that really runs.
+COMMAND_WRAPPERS = frozenset({"env"})
 
 def default_policy_path() -> Path:
     configured_path = os.environ.get(POLICY_PATH_ENV_VAR)
@@ -71,6 +73,19 @@ def program_name(resource: str) -> str:
     return name.removesuffix(".exe")
 
 
+def unwrap_command(program: str, args: tuple[str, ...]) -> tuple[str, tuple[str, ...]]:
+    if program not in COMMAND_WRAPPERS:
+        return program, args
+
+    for index, arg in enumerate(args):
+        if "=" in arg or arg.startswith("-"):
+            continue
+
+        return program_name(arg), args[:index] + args[index + 1 :]
+
+    return program, args
+
+
 def evaluate_sequence(
     actions: list[AgentAction],
     policy: SecurityPolicy | None = None,
@@ -120,10 +135,11 @@ def evaluate_sequence(
                 )
 
         if action.name == "run_command":
-            program = program_name(action.resource)
-
+            program, args = unwrap_command(
+                program_name(action.resource), action.args
+            )
             for rule in active_policy.command_rules:
-                argument = rule.find_argument(program, action.args)
+                argument = rule.find_argument(program, args)
 
                 if argument is not None:
                     risk_score += rule.score
@@ -131,7 +147,7 @@ def evaluate_sequence(
                         f"Ran {program} with {argument} ({rule.reason})."
                     )
 
-            contacted_hosts = {host_of(arg) for arg in action.args}
+            contacted_hosts = {host_of(arg) for arg in args}
 
             for rule in active_policy.network_rules:
                 if any(rule.matches(host) for host in contacted_hosts):
