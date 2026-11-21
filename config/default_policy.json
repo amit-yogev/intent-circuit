@@ -4,7 +4,8 @@
     "send_external": 20,
     "delete_file": 60,
     "sensitive_data_exfiltration": 100,
-    "write_trigger_file": 60
+    "write_trigger_file": 60,
+    "trigger_activation": 40
   },
   "thresholds": {
     "warn": 25,
@@ -22,15 +23,18 @@
     },
     {
       "pattern": ".git/config",
-      "reason": "settings such as core.fsmonitor and core.hooksPath run commands"
+      "reason": "settings such as core.fsmonitor and core.hooksPath run commands",
+      "activated_by": ["git"]
     },
     {
       "pattern": ".git/hooks/*",
-      "reason": "Git runs hooks automatically"
+      "reason": "Git runs hooks automatically",
+      "activated_by": ["git"]
     },
     {
       "pattern": ".github/workflows/*",
-      "reason": "CI runs workflows with access to repository secrets"
+      "reason": "CI runs workflows with access to repository secrets",
+      "activated_by": ["git", "gh"]
     },
     {
       "pattern": ".venv/*/python*",
@@ -38,7 +42,8 @@
     },
     {
       "pattern": ".claude/settings*.json",
-      "reason": "agent hook settings can run commands outside the sandbox"
+      "reason": "agent hook settings can run commands outside the sandbox",
+      "activated_by": ["claude"]
     }
   ]
 }

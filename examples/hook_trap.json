@@ -1,0 +1,7 @@
+{
+  "scenario_name": "Git hook trap: write a hook, then make Git run it",
+  "actions": [
+    {"name": "write_file", "resource": ".git/hooks/pre-commit"},
+    {"name": "run_command", "resource": "git", "args": ["commit", "-m", "Update docs"]}
+  ]
+}
