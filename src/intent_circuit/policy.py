@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .errors import InvalidPolicyError
 
@@ -29,6 +30,46 @@ class TriggerFile:
         )
 
 
+def host_of(text: str) -> str:
+    cleaned = text.strip().lower()
+
+    if "://" not in cleaned:
+        cleaned = "//" + cleaned
+
+    try:
+        return urlsplit(cleaned).hostname or ""
+    except ValueError:
+        return ""
+
+
+@dataclass(frozen=True)
+class CommandRule:
+    program: str
+    argument: str
+    reason: str
+    score: int
+
+    def find_argument(self, program: str, args: tuple[str, ...]) -> str | None:
+        if not fnmatchcase(program, self.program):
+            return None
+
+        for arg in args:
+            if fnmatchcase(arg.lower(), self.argument):
+                return arg
+
+        return None
+
+
+@dataclass(frozen=True)
+class NetworkRule:
+    host: str
+    reason: str
+    score: int
+
+    def matches(self, host: str) -> bool:
+        return fnmatchcase(host, self.host)
+
+
 @dataclass(frozen=True)
 class SecurityPolicy:
     read_sensitive_score: int
@@ -41,6 +82,8 @@ class SecurityPolicy:
     write_trigger_file_score: int = DEFAULT_WRITE_TRIGGER_FILE_SCORE
     trigger_activation_score: int = DEFAULT_TRIGGER_ACTIVATION_SCORE
     trigger_files: tuple[TriggerFile, ...] = ()
+    command_rules: tuple[CommandRule, ...] = ()
+    network_rules: tuple[NetworkRule, ...] = ()
 
 
 def read_score(
@@ -106,6 +149,62 @@ def read_trigger_files(value: Any) -> tuple[TriggerFile, ...]:
     return tuple(trigger_files)
 
 
+def read_rule_text(item: dict[str, Any], label: str, key: str) -> str:
+    value = item.get(key)
+
+    if not isinstance(value, str) or not value:
+        raise InvalidPolicyError(f"{label} needs a '{key}'.")
+
+    return value
+
+
+def read_command_rules(value: Any) -> tuple[CommandRule, ...]:
+    if not isinstance(value, list):
+        raise InvalidPolicyError("Policy 'command_rules' must be a list.")
+
+    rules: list[CommandRule] = []
+
+    for index, item in enumerate(value, start=1):
+        label = f"Command rule #{index}"
+
+        if not isinstance(item, dict):
+            raise InvalidPolicyError(f"{label} must be a JSON object.")
+
+        rules.append(
+            CommandRule(
+                program=read_rule_text(item, label, "program").lower(),
+                argument=read_rule_text(item, label, "argument").lower(),
+                reason=read_rule_text(item, label, "reason"),
+                score=read_score(item, label, "score"),
+            )
+        )
+
+    return tuple(rules)
+
+
+def read_network_rules(value: Any) -> tuple[NetworkRule, ...]:
+    if not isinstance(value, list):
+        raise InvalidPolicyError("Policy 'network_rules' must be a list.")
+
+    rules: list[NetworkRule] = []
+
+    for index, item in enumerate(value, start=1):
+        label = f"Network rule #{index}"
+
+        if not isinstance(item, dict):
+            raise InvalidPolicyError(f"{label} must be a JSON object.")
+
+        rules.append(
+            NetworkRule(
+                host=read_rule_text(item, label, "host").lower(),
+                reason=read_rule_text(item, label, "reason"),
+                score=read_score(item, label, "score"),
+            )
+        )
+
+    return tuple(rules)
+
+
 def load_policy(policy_path: str | Path) -> SecurityPolicy:
     path = Path(policy_path)
 
@@ -155,6 +254,8 @@ def load_policy(policy_path: str | Path) -> SecurityPolicy:
             default=DEFAULT_TRIGGER_ACTIVATION_SCORE,
         ),
         trigger_files=read_trigger_files(data.get("trigger_files", [])),
+        command_rules=read_command_rules(data.get("command_rules", [])),
+        network_rules=read_network_rules(data.get("network_rules", [])),
     )
 
     if not (

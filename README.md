@@ -2,8 +2,8 @@
 
 ![Tests](https://github.com/amit-yogev/intent-circuit/actions/workflows/tests.yml/badge.svg)
 
-**A security layer that watches what AI coding agents do, and decides when to stop them, when a
-sequence of allowed actions adds up to something dangerous.**
+**A security layer that watches what AI coding agents do, and decides when to
+stop them, when a sequence of allowed actions adds up to something dangerous.**
 
 ## Why
 
@@ -21,28 +21,33 @@ IntentCircuit looks at the whole sequence of actions and the intent behind it.
 
 - Evaluates an ordered sequence of agent actions and remembers earlier steps
 - Calculates a risk score from 0 to 100 and returns `ALLOW`, `WARN`, `APPROVAL` or `BLOCK`, with an explanation
-- Detects sensitive data being read and then sent outside the organization
-- Loads its rules from a JSON policy that each organization can change without touching the code
-- Fails closed: unknown or malformed input is rejected, never silently allowed
 - Understands file writes, commands with their arguments, and network requests
 - Flags writes to execution-trigger files, such as `.vscode/tasks.json`, Git hooks and CI workflows, for human approval
 - Blocks a trap that is set and then triggered: for example, the agent writes a Git hook and then runs `git`
+- Judges commands by their arguments, not only their name: `git -c core.fsmonitor=...` is blocked while `git status` is allowed
+- Blocks access to the Docker socket and to cloud metadata services
+- Detects sensitive data being read and then sent outside the organization
+- Loads all of its rules from a JSON policy that each organization can change without touching the code
+- Fails closed: unknown or malformed input is rejected, never silently allowed
 - Automated tests run on every pull request
 
-**Status:** early prototype. Detecting sandbox-escape intent (execution-trigger
-files, command arguments, the Docker socket, cloud metadata) is the next
-milestone. See the [roadmap](ROADMAP.md).
+**Status:** early prototype. The detection rules work on recorded action
+sequences. Next: measuring them against documented escape techniques, then
+connecting to a real coding agent. See the [roadmap](ROADMAP.md).
 
-## Example
+## Example: an indirect sandbox escape
 
-Input (`examples/risky_sequence.json`):
+Input (`examples/escape_attempt.json`), four steps that are each allowed on
+their own:
 
 ```json
 {
-  "scenario_name": "Potential employee data leak",
+  "scenario_name": "Indirect sandbox escape through an editor task",
   "actions": [
-    {"name": "read_file", "resource": "employee_salaries.csv", "sensitive": true},
-    {"name": "send_file", "resource": "employee_salaries.csv", "destination": "external"}
+    {"name": "run_command", "resource": "ls", "args": ["-la", "/"]},
+    {"name": "write_file", "resource": ".vscode/tasks.json"},
+    {"name": "run_command", "resource": "git", "args": ["-c", "core.fsmonitor=./payload.sh", "status"]},
+    {"name": "network_request", "resource": "http://169.254.169.254/latest/meta-data/"}
   ]
 }
 ```
@@ -50,13 +55,16 @@ Input (`examples/risky_sequence.json`):
 Output:
 
 ```text
-Analysis complete 
-Scenario: Potential employee data leak
+Analysis complete
+Scenario: Indirect sandbox escape through an editor task
 Risk score: 100/100
 Decision: BLOCK
-Reason: Sensitive resource was read: employee_salaries.csv. Sensitive data was read and then sent externally.
+Reason: Wrote an execution-trigger file: .vscode/tasks.json (the editor runs these tasks outside the sandbox). Ran git with core.fsmonitor=./payload.sh (makes Git run a program of the agent's choice). Contacted 169.254.169.254 (the cloud metadata service hands out credentials).
 Report saved to: reports\latest_report.json
 ```
+
+More examples: `examples/hook_trap.json` (a Git hook written and then
+triggered) and `examples/risky_sequence.json` (sensitive data sent outside).
 
 ## Quick start
 
@@ -89,7 +97,7 @@ python -m src.intent_circuit.main
 Analyze a scenario file and save a report to `reports/latest_report.json`:
 
 ```powershell
-python -m src.intent_circuit.runner --input examples/risky_sequence.json
+python -m src.intent_circuit.runner --input examples/escape_attempt.json
 ```
 
 ## Decision levels
@@ -103,11 +111,17 @@ python -m src.intent_circuit.runner --input examples/risky_sequence.json
 
 ## Configuration
 
-Scores and thresholds live in `config/default_policy.json`. Changing the
-`delete_file` score from `60` to `80`, for example, turns `APPROVAL` into
-`BLOCK` without any code change.
+Everything the engine checks lives in `config/default_policy.json`:
 
-To use a different policy file, set an environment variable:
+| Section | What it holds |
+|---|---|
+| `scores` and `thresholds` | Risk points for each kind of action, and where each decision level starts |
+| `trigger_files` | Files that another program runs automatically, why each is dangerous, and which programs run it |
+| `command_rules` | A program, a dangerous argument pattern, the reason and its own score |
+| `network_rules` | Dangerous hosts, such as cloud metadata services, with a reason and a score |
+
+Changing a number or adding a rule changes the decisions without any code
+change. To use a different policy file, set an environment variable:
 
 ```powershell
 $env:INTENTCIRCUIT_POLICY_PATH = "config/my_policy.json"
@@ -128,10 +142,12 @@ Every error exits with code `1`, so other tools and CI pipelines can detect it.
 | File | Responsibility |
 |---|---|
 | `src/intent_circuit/engine.py` | Risk engine: evaluates an action sequence and returns a decision |
-| `src/intent_circuit/policy.py` | Loads and validates the security policy |
+| `src/intent_circuit/policy.py` | Loads and validates the security policy and its rules |
 | `src/intent_circuit/runner.py` | Command-line tool: reads a scenario file and saves a report |
 | `src/intent_circuit/errors.py` | Error types for invalid scenarios and policies |
 | `src/intent_circuit/main.py` | Demonstration scenarios |
+| `config/default_policy.json` | The default security policy |
+| `examples/` | Scenario files, including sandbox-escape attempts |
 | `tests/` | Automated tests |
 | `.github/workflows/tests.yml` | Runs the tests on every pull request |
 

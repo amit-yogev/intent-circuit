@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .policy import SecurityPolicy, TriggerFile, load_policy
+from .policy import SecurityPolicy, TriggerFile, host_of, load_policy
 
 POLICY_PATH_ENV_VAR = "INTENTCIRCUIT_POLICY_PATH"
 
@@ -122,6 +122,24 @@ def evaluate_sequence(
         if action.name == "run_command":
             program = program_name(action.resource)
 
+            for rule in active_policy.command_rules:
+                argument = rule.find_argument(program, action.args)
+
+                if argument is not None:
+                    risk_score += rule.score
+                    reasons.append(
+                        f"Ran {program} with {argument} ({rule.reason})."
+                    )
+
+            contacted_hosts = {host_of(arg) for arg in action.args}
+
+            for rule in active_policy.network_rules:
+                if any(rule.matches(host) for host in contacted_hosts):
+                    risk_score += rule.score
+                    reasons.append(
+                        f"Ran {program} to contact {rule.host} ({rule.reason})."
+                    )
+
             for path, trigger_file in list(armed_triggers.items()):
                 if program in trigger_file.activated_by:
                     del armed_triggers[path]
@@ -130,6 +148,14 @@ def evaluate_sequence(
                         f"Ran {program} after writing {path}, which {program} "
                         "runs automatically: a trap was set and then triggered."
                     )
+
+        if action.name == "network_request":
+            host = host_of(action.resource)
+
+            for rule in active_policy.network_rules:
+                if rule.matches(host):
+                    risk_score += rule.score
+                    reasons.append(f"Contacted {host} ({rule.reason}).")
 
     risk_score = min(risk_score, 100)
     decision = decision_from_score(risk_score, active_policy)

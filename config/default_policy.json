@@ -45,5 +45,67 @@
       "reason": "agent hook settings can run commands outside the sandbox",
       "activated_by": ["claude"]
     }
+  ],
+  "command_rules": [
+    {
+      "program": "git",
+      "argument": "*core.fsmonitor*",
+      "reason": "makes Git run a program of the agent's choice",
+      "score": 80
+    },
+    {
+      "program": "git",
+      "argument": "*core.hookspath*",
+      "reason": "points Git to hooks the agent controls",
+      "score": 80
+    },
+    {
+      "program": "git",
+      "argument": "*core.sshcommand*",
+      "reason": "makes Git run a command of the agent's choice",
+      "score": 80
+    },
+    {
+      "program": "*",
+      "argument": "*docker.sock*",
+      "reason": "the Docker socket gives control of the host",
+      "score": 90
+    },
+    {
+      "program": "docker",
+      "argument": "--privileged",
+      "reason": "a privileged container can take over the host",
+      "score": 80
+    },
+    {
+      "program": "chmod",
+      "argument": "*+s*",
+      "reason": "setuid makes a program run with its owner's rights",
+      "score": 80
+    },
+    {
+      "program": "sudo",
+      "argument": "*",
+      "reason": "runs a command with administrator rights",
+      "score": 50
+    },
+    {
+      "program": "mount",
+      "argument": "*",
+      "reason": "mounting can expose host files inside the sandbox",
+      "score": 60
+    }
+  ],
+  "network_rules": [
+    {
+      "host": "169.254.169.254",
+      "reason": "the cloud metadata service hands out credentials",
+      "score": 90
+    },
+    {
+      "host": "metadata.google.internal",
+      "reason": "the cloud metadata service hands out credentials",
+      "score": 90
+    }
   ]
 }
