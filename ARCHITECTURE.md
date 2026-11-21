@@ -20,14 +20,15 @@ component later executes.
 - Calculate a risk score from 0 to 100 and map it to `ALLOW`, `WARN`, `APPROVAL` or `BLOCK`
 - Detect writes to execution-trigger files from a catalog in the policy
 - Remember which trigger files the agent wrote, and detect when the agent then runs the program that executes them (a trap that is set and then triggered)
-- Load scores, thresholds and the trigger-file catalog from a JSON policy; the policy path is configurable through an environment variable
+- Judge commands by their arguments, not only their name: Git settings that run programs (`core.fsmonitor`, `core.hooksPath`, `core.sshCommand`), the Docker socket, privileged containers, setuid, `sudo` and `mount`
+- Detect requests to cloud metadata services, both as network requests and as addresses inside commands such as `curl`
+- Load scores, thresholds, the trigger-file catalog, command rules and network rules from a JSON policy; the policy path is configurable through an environment variable
 - Read scenarios from JSON and write a JSON report
 - Reject invalid or unknown input (fail closed) with a clear message and exit code 1
 - Run the automated tests on every pull request
 
 ### Planned (see the roadmap)
 
-- Judge commands by their arguments, not only their name (`git -c core.fsmonitor`, the Docker socket, cloud metadata)
 - Real-time, step-by-step decisions through an agent hook
 - A benchmark against sandbox-escape techniques documented in 2026
 
@@ -43,8 +44,10 @@ component later executes.
 | Entity | What it represents | Where |
 |---|---|---|
 | `AgentAction` | One step an agent wants to perform | `engine.py` |
-| `SecurityPolicy` | The scores, thresholds and trigger-file catalog an organization chooses | `policy.py` |
+| `SecurityPolicy` | The scores, thresholds, trigger-file catalog and rules an organization chooses | `policy.py` |
 | `TriggerFile` | A file that another program runs automatically, why it is dangerous, and which programs run it | `policy.py` |
+| `CommandRule` | A program, a dangerous argument pattern, the reason and its own score | `policy.py` |
+| `NetworkRule` | A dangerous host, the reason and its own score | `policy.py` |
 | Scenario | A named, ordered list of actions | loaded by `runner.py` from JSON |
 | Decision | Decision level, risk score and reason | returned by `evaluate_sequence` |
 | Report | Scenario, actions, decision and timestamp | written by `runner.py` |
@@ -53,7 +56,7 @@ component later executes.
 ## 4. Relationships
 
 - A scenario contains one or more actions, in order. Order matters: the same actions in a different order can carry a different risk.
-- One policy is used for the whole scenario. The policy owns the trigger-file catalog.
+- One policy is used for the whole scenario. The policy owns the trigger-file catalog, the command rules and the network rules.
 - While evaluating, the engine keeps two memories: sensitive files that were read, and trigger files the agent wrote ("armed traps").
 - Evaluating a scenario produces exactly one decision; the report wraps it with the original actions.
 - An error stops the evaluation; no partial report is written.
@@ -80,12 +83,27 @@ classDiagram
     +int write_trigger_file_score
     +int trigger_activation_score
     +tuple trigger_files
+    +tuple command_rules
+    +tuple network_rules
   }
   class TriggerFile {
     +str pattern
     +str reason
     +tuple activated_by
     +matches(path) bool
+  }
+  class CommandRule {
+    +str program
+    +str argument
+    +str reason
+    +int score
+    +find_argument(program, args) str
+  }
+  class NetworkRule {
+    +str host
+    +str reason
+    +int score
+    +matches(host) bool
   }
   class engine {
     +evaluate_sequence(actions, policy) tuple
@@ -97,6 +115,9 @@ classDiagram
   class policy {
     +load_policy(path) SecurityPolicy
     +read_trigger_files(value) tuple
+    +read_command_rules(value) tuple
+    +read_network_rules(value) tuple
+    +host_of(text) str
   }
   class runner {
     +load_scenario(path) tuple
@@ -111,23 +132,28 @@ classDiagram
   IntentCircuitError <|-- InvalidScenarioError
   IntentCircuitError <|-- InvalidPolicyError
   SecurityPolicy o-- TriggerFile : catalog
+  SecurityPolicy o-- CommandRule : rules
+  SecurityPolicy o-- NetworkRule : rules
   runner --> engine : evaluates with
   runner --> policy : loads
   engine --> policy : loads default
   engine ..> AgentAction : reads
   engine ..> SecurityPolicy : uses
   engine ..> TriggerFile : arms and triggers
+  engine ..> CommandRule : checks arguments
+  engine ..> NetworkRule : checks hosts
   policy ..> SecurityPolicy : creates
 ```
 
 ## 6. Data flow
 
 1. `runner` reads the scenario JSON and validates every action. Unknown or malformed actions are rejected.
-2. `policy` loads and validates the security policy, including the trigger-file catalog.
+2. `policy` loads and validates the security policy, including the trigger-file catalog and the command and network rules.
 3. `engine` walks through the actions in order. It remembers which sensitive resources were read and which trigger files the agent wrote.
 4. A write to a trigger file adds risk. Running a program that executes a trigger file the agent wrote earlier adds more risk.
-5. The score is capped at 100 and mapped to a decision using the policy thresholds.
-6. `runner` saves the report to `reports/latest_report.json`.
+5. Every command is checked against the command rules (by its arguments) and the network rules (by any address in its arguments). Every network request is checked against the network rules.
+6. The score is capped at 100 and mapped to a decision using the policy thresholds.
+7. `runner` saves the report to `reports/latest_report.json`.
 
 ## 7. Decisions and trade-offs
 
@@ -146,6 +172,11 @@ classDiagram
 | Writing a trigger file and then running the program that executes it is blocked | Setting a trap and then triggering it shows intent, not an accident | A legitimate "add a hook, then commit" flow is blocked and must be done by a person |
 | Paths and program names are normalized before matching (slashes, letter case, `./`, `.exe`) | Otherwise an agent could bypass a rule by rewriting a name | Matching is less strict than an exact comparison |
 | Editor-run files (`.vscode`, `.venv`) have no activating program | The user's editor, not the agent, runs them, so there is no activation step to observe | For these files only the write itself is flagged |
+| Commands are judged by their arguments, not only their name | `git` was on the safe-command list in a 2026 escape; one argument made it run the agent's program | Rules must list dangerous arguments, and new tricks need new rules |
+| Each command and network rule carries its own score | Risks differ: `sudo` can be legitimate (approval), the Docker socket almost never is (block) | More numbers to tune in the policy |
+| Argument patterns match both temporary and permanent forms (`*core.fsmonitor*`) | `git -c core.fsmonitor=...` and `git config core.fsmonitor ...` are the same attack | A harmless command that mentions the setting, such as unsetting it, also needs approval |
+| Addresses are also checked inside command arguments | Agents usually reach the network with `curl`, not with a separate network action | Only addresses that appear as arguments are seen; an address built inside a script is not |
+| Reconnaissance (`ls -la /`) adds no risk on its own | Agents explore their environment all the time for legitimate reasons | Early warning signs are not scored |
 
 ## 8. Threat model: sandbox escape
 
