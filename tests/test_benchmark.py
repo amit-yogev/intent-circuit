@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from intent_circuit.benchmark import load_cases, run_case
+from intent_circuit.benchmark import baseline_stops, load_cases, run_case, summarize
 from intent_circuit.engine import BUILTIN_POLICY_PATH
 from intent_circuit.errors import InvalidScenarioError
 from intent_circuit.policy import load_policy
@@ -50,6 +50,33 @@ def test_known_false_alarms_are_listed(results) -> None:
     }
 
 
+def test_summary_counts_correct_results(results) -> None:
+    summary = summarize(results)
+
+    assert summary["documented"] == {"total": 13, "intent_circuit": 13, "baseline": 0}
+    assert summary["variant"] == {"total": 9, "intent_circuit": 4, "baseline": 2}
+    assert summary["everyday"] == {"total": 10, "intent_circuit": 8, "baseline": 10}
+
+
+def test_name_only_baseline_misses_every_documented_escape() -> None:
+    documented = [c for c in load_cases() if c.origin == "documented"]
+
+    assert not any(baseline_stops(case) for case in documented)
+
+
+def test_baseline_catches_what_intent_circuit_misses(results) -> None:
+    caught_by_baseline_only = {
+        r.case.case_id
+        for r in results
+        if r.case.kind == "escape" and not r.stopped and baseline_stops(r.case)
+    }
+
+    assert caught_by_baseline_only == {
+        "variant-hook-written-by-shell",
+        "variant-git-through-env",
+    }
+
+    
 def write_benchmark(tmp_path: Path, cases: list) -> Path:
     path = tmp_path / "cases.json"
     path.write_text(json.dumps({"cases": cases}), encoding="utf-8")
