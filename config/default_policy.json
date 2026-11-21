@@ -3,11 +3,42 @@
     "read_sensitive": 30,
     "send_external": 20,
     "delete_file": 60,
-    "sensitive_data_exfiltration": 100
+    "sensitive_data_exfiltration": 100,
+    "write_trigger_file": 60
   },
   "thresholds": {
     "warn": 25,
     "approval": 50,
     "block": 75
-  }
+  },
+  "trigger_files": [
+    {
+      "pattern": ".vscode/tasks.json",
+      "reason": "the editor runs these tasks outside the sandbox"
+    },
+    {
+      "pattern": ".vscode/settings.json",
+      "reason": "workspace settings can point the editor to programs it runs"
+    },
+    {
+      "pattern": ".git/config",
+      "reason": "settings such as core.fsmonitor and core.hooksPath run commands"
+    },
+    {
+      "pattern": ".git/hooks/*",
+      "reason": "Git runs hooks automatically"
+    },
+    {
+      "pattern": ".github/workflows/*",
+      "reason": "CI runs workflows with access to repository secrets"
+    },
+    {
+      "pattern": ".venv/*/python*",
+      "reason": "editor extensions run this interpreter outside the sandbox"
+    },
+    {
+      "pattern": ".claude/settings*.json",
+      "reason": "agent hook settings can run commands outside the sandbox"
+    }
+  ]
 }

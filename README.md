@@ -25,6 +25,7 @@ IntentCircuit looks at the whole sequence of actions and the intent behind it.
 - Loads its rules from a JSON policy that each organization can change without touching the code
 - Fails closed: unknown or malformed input is rejected, never silently allowed
 - Understands file writes, commands with their arguments, and network requests
+- Flags writes to execution-trigger files, such as `.vscode/tasks.json`, Git hooks and CI workflows, for human approval
 - Automated tests run on every pull request
 
 **Status:** early prototype. Detecting sandbox-escape intent (execution-trigger
