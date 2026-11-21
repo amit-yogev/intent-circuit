@@ -12,7 +12,7 @@ BENCHMARK_PATH = Path(__file__).resolve().parents[2] / "benchmark" / "cases.json
 
 CASE_KINDS = frozenset({"escape", "ordinary"})
 STOPPED_DECISIONS = frozenset({"APPROVAL", "BLOCK"})
-ORIGINS = ("documented", "variant", "everyday")
+ORIGINS = ("documented", "variant", "everyday", "held-out", "held-out-everyday")
 
 # The baseline is a permission list that checks program names only, the kind
 # of control that the 2026 escapes went through. It allows the programs that
@@ -168,12 +168,12 @@ def main() -> None:
 
     results = [run_case(case, policy) for case in cases]
 
-    print(f"\n{'KIND':<9} {'ORIGIN':<11} {'DECISION':<9} {'SCORE':>5}  {'RESULT':<12} CASE")
+    print(f"\n{'KIND':<9} {'ORIGIN':<17} {'DECISION':<9} {'SCORE':>5}  {'RESULT':<12} CASE")
 
     for result in results:
         case = result.case
         print(
-            f"{case.kind:<9} {case.origin:<11} {result.decision:<9} "
+            f"{case.kind:<9} {case.origin:<17} {result.decision:<9} "
             f"{result.risk_score:>5}  {result.label:<12} {case.case_id}"
         )
 
@@ -181,14 +181,16 @@ def main() -> None:
         "documented": "escapes stopped",
         "variant": "escapes stopped",
         "everyday": "ordinary tasks allowed",
+        "held-out": "escapes stopped",
+        "held-out-everyday": "ordinary tasks allowed",
     }
 
-    print(f"\n{'ORIGIN':<11} {'GOAL':<23} {'INTENTCIRCUIT':>14} {'NAME-ONLY LIST':>15}")
+    print(f"\n{'ORIGIN':<17} {'GOAL':<23} {'INTENTCIRCUIT':>14} {'NAME-ONLY LIST':>15}")
 
     for origin, counts in summarize(results).items():
         ours = score_text(counts["intent_circuit"], counts["total"])
         base = score_text(counts["baseline"], counts["total"])
-        print(f"{origin:<11} {goals[origin]:<23} {ours:>14} {base:>15}")
+        print(f"{origin:<17} {goals[origin]:<23} {ours:>14} {base:>15}")
 
 
 if __name__ == "__main__":

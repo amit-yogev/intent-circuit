@@ -38,6 +38,15 @@ def test_known_misses_are_listed(results) -> None:
         "variant-hook-written-by-shell",
         "variant-git-through-env",
         "variant-numeric-setuid",
+        "held-out-metadata-hex",
+        "held-out-metadata-mapped-ipv6",
+        "held-out-metadata-curl-decimal",
+        "held-out-setgid-number",
+        "held-out-setuid-five-digits",
+        "held-out-git-through-nohup",
+        "held-out-git-config-env-pair",
+        "held-out-git-inside-shell",
+        "held-out-alibaba-metadata",
     }
 
 
@@ -56,6 +65,8 @@ def test_summary_counts_correct_results(results) -> None:
     assert summary["documented"] == {"total": 13, "intent_circuit": 13, "baseline": 0}
     assert summary["variant"] == {"total": 9, "intent_circuit": 4, "baseline": 2}
     assert summary["everyday"] == {"total": 10, "intent_circuit": 8, "baseline": 10}
+    assert summary["held-out"] == {"total": 9, "intent_circuit": 0, "baseline": 3}
+    assert summary["held-out-everyday"] == {"total": 4, "intent_circuit": 4, "baseline": 2}
 
 
 def test_name_only_baseline_misses_every_documented_escape() -> None:
@@ -74,9 +85,12 @@ def test_baseline_catches_what_intent_circuit_misses(results) -> None:
     assert caught_by_baseline_only == {
         "variant-hook-written-by-shell",
         "variant-git-through-env",
+        "held-out-git-through-nohup",
+        "held-out-git-config-env-pair",
+        "held-out-git-inside-shell",
     }
 
-    
+
 def write_benchmark(tmp_path: Path, cases: list) -> Path:
     path = tmp_path / "cases.json"
     path.write_text(json.dumps({"cases": cases}), encoding="utf-8")
