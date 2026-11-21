@@ -6,11 +6,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .engine import (
+    KNOWN_ACTIONS,
+    AgentAction,
+    default_policy_path,
+    evaluate_sequence,
+)
 from .errors import IntentCircuitError, InvalidScenarioError, ScenarioFileError
-from .engine import AgentAction, default_policy_path, evaluate_sequence
 from .policy import SecurityPolicy, load_policy
-
-KNOWN_ACTIONS = {"read_file", "send_file", "delete_file"}
 
 
 def read_json_file(path: Path) -> Any:
@@ -36,6 +39,7 @@ def parse_action(action_data: Any, index: int) -> AgentAction:
     resource = action_data.get("resource")
     sensitive = action_data.get("sensitive", False)
     destination = action_data.get("destination")
+    args = action_data.get("args", [])
 
     if not isinstance(name, str) or not name:
         raise InvalidScenarioError(f"{position} is missing a 'name'.")
@@ -57,11 +61,19 @@ def parse_action(action_data: Any, index: int) -> AgentAction:
     if destination is not None and not isinstance(destination, str):
         raise InvalidScenarioError(f"{position}: 'destination' must be text.")
 
+    if not isinstance(args, list) or not all(
+        isinstance(arg, str) for arg in args
+    ):
+        raise InvalidScenarioError(
+            f"{position}: 'args' must be a list of text values."
+        )
+
     return AgentAction(
         name=name,
         resource=resource,
         sensitive=sensitive,
         destination=destination,
+        args=tuple(args),
     )
 
 

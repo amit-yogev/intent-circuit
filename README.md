@@ -24,7 +24,8 @@ IntentCircuit looks at the whole sequence of actions and the intent behind it.
 - Detects sensitive data being read and then sent outside the organization
 - Loads its rules from a JSON policy that each organization can change without touching the code
 - Fails closed: unknown or malformed input is rejected, never silently allowed
-- 17 automated tests, run on every pull request
+- Understands file writes, commands with their arguments, and network requests
+- Automated tests run on every pull request
 
 **Status:** early prototype. Detecting sandbox-escape intent (execution-trigger
 files, command arguments, the Docker socket, cloud metadata) is the next
