@@ -26,11 +26,12 @@ component later executes.
 - Read scenarios from JSON and write a JSON report
 - Reject invalid or unknown input (fail closed) with a clear message and exit code 1
 - Run the automated tests on every pull request
+- Measure the engine against a labelled benchmark of escapes and ordinary developer work
 
 ### Planned (see the roadmap)
 
 - Real-time, step-by-step decisions through an agent hook
-- A benchmark against sandbox-escape techniques documented in 2026
+
 
 ### Out of scope
 
@@ -170,13 +171,15 @@ classDiagram
 | Writing an execution-trigger file needs approval, not an automatic block | Developers sometimes ask an agent to set up editor tasks or CI on purpose | A person must review each such write |
 | The trigger-file catalog lives in the policy, not in the code | Each organization can add the files its own tools run | A file missing from the catalog is a blind spot |
 | Writing a trigger file and then running the program that executes it is blocked | Setting a trap and then triggering it shows intent, not an accident | A legitimate "add a hook, then commit" flow is blocked and must be done by a person |
-| Paths and program names are normalized before matching (slashes, letter case, `./`, `.exe`) | Otherwise an agent could bypass a rule by rewriting a name | Matching is less strict than an exact comparison |
+| Paths and program names are normalized before matching (slashes, letter case, `./`, `../`, `//`, `.exe`) | Otherwise an agent could bypass a rule by rewriting a name | Matching is less strict than an exact comparison |
 | Editor-run files (`.vscode`, `.venv`) have no activating program | The user's editor, not the agent, runs them, so there is no activation step to observe | For these files only the write itself is flagged |
 | Commands are judged by their arguments, not only their name | `git` was on the safe-command list in a 2026 escape; one argument made it run the agent's program | Rules must list dangerous arguments, and new tricks need new rules |
 | Each command and network rule carries its own score | Risks differ: `sudo` can be legitimate (approval), the Docker socket almost never is (block) | More numbers to tune in the policy |
 | Argument patterns match both temporary and permanent forms (`*core.fsmonitor*`) | `git -c core.fsmonitor=...` and `git config core.fsmonitor ...` are the same attack | A harmless command that mentions the setting, such as unsetting it, also needs approval |
 | Addresses are also checked inside command arguments | Agents usually reach the network with `curl`, not with a separate network action | Only addresses that appear as arguments are seen; an address built inside a script is not |
 | Reconnaissance (`ls -la /`) adds no risk on its own | Agents explore their environment all the time for legitimate reasons | Early warning signs are not scored |
+| The benchmark includes variants and ordinary work, not only documented escapes | Testing only the cases the rules were written for proves little | The reported numbers are lower |
+| Known misses and false alarms are listed in the tests | A new miss, or a fixed one, changes the list and must be noted on purpose | The list must be updated with every improvement |
 
 ## 8. Threat model: sandbox escape
 
