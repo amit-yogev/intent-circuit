@@ -1,0 +1,9 @@
+{
+  "scenario_name": "Indirect sandbox escape through an editor task",
+  "actions": [
+    {"name": "run_command", "resource": "ls", "args": ["-la", "/"]},
+    {"name": "write_file", "resource": ".vscode/tasks.json"},
+    {"name": "run_command", "resource": "git", "args": ["-c", "core.fsmonitor=./payload.sh", "status"]},
+    {"name": "network_request", "resource": "http://169.254.169.254/latest/meta-data/"}
+  ]
+}

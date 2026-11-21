@@ -9,6 +9,17 @@ POLICY_PATH_ENV_VAR = "INTENTCIRCUIT_POLICY_PATH"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BUILTIN_POLICY_PATH = PROJECT_ROOT / "config" / "default_policy.json"
 
+KNOWN_ACTIONS = frozenset(
+    {
+        "read_file",
+        "send_file",
+        "delete_file",
+        "write_file",
+        "run_command",
+        "network_request",
+    }
+)
+
 
 def default_policy_path() -> Path:
     configured_path = os.environ.get(POLICY_PATH_ENV_VAR)
@@ -25,6 +36,7 @@ class AgentAction:
     resource: str
     sensitive: bool = False
     destination: str | None = None
+    args: tuple[str, ...] = ()
 
 
 def decision_from_score(
