@@ -1,9 +1,30 @@
 import json
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
 from .errors import InvalidPolicyError
+
+DEFAULT_WRITE_TRIGGER_FILE_SCORE = 60
+
+
+@dataclass(frozen=True)
+class TriggerFile:
+    pattern: str
+    reason: str
+
+    def matches(self, path: str) -> bool:
+        normalized = path.replace("\\", "/").lower()
+
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
+
+        pattern = self.pattern.lower()
+
+        return fnmatchcase(normalized, pattern) or fnmatchcase(
+            normalized, "*/" + pattern
+        )
 
 
 @dataclass(frozen=True)
@@ -15,10 +36,17 @@ class SecurityPolicy:
     warn_threshold: int
     approval_threshold: int
     block_threshold: int
+    write_trigger_file_score: int = DEFAULT_WRITE_TRIGGER_FILE_SCORE
+    trigger_files: tuple[TriggerFile, ...] = ()
 
 
-def read_score(section: dict[str, Any], section_name: str, key: str) -> int:
-    value = section.get(key)
+def read_score(
+    section: dict[str, Any],
+    section_name: str,
+    key: str,
+    default: int | None = None,
+) -> int:
+    value = section.get(key, default)
 
     if isinstance(value, bool) or not isinstance(value, int):
         raise InvalidPolicyError(
@@ -31,6 +59,32 @@ def read_score(section: dict[str, Any], section_name: str, key: str) -> int:
         )
 
     return value
+
+
+def read_trigger_files(value: Any) -> tuple[TriggerFile, ...]:
+    if not isinstance(value, list):
+        raise InvalidPolicyError("Policy 'trigger_files' must be a list.")
+
+    trigger_files: list[TriggerFile] = []
+
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            raise InvalidPolicyError(
+                f"Trigger file #{index} must be a JSON object."
+            )
+
+        pattern = item.get("pattern")
+        reason = item.get("reason")
+
+        if not isinstance(pattern, str) or not pattern:
+            raise InvalidPolicyError(f"Trigger file #{index} needs a 'pattern'.")
+
+        if not isinstance(reason, str) or not reason:
+            raise InvalidPolicyError(f"Trigger file #{index} needs a 'reason'.")
+
+        trigger_files.append(TriggerFile(pattern=pattern, reason=reason))
+
+    return tuple(trigger_files)
 
 
 def load_policy(policy_path: str | Path) -> SecurityPolicy:
@@ -69,6 +123,13 @@ def load_policy(policy_path: str | Path) -> SecurityPolicy:
         warn_threshold=read_score(thresholds, "thresholds", "warn"),
         approval_threshold=read_score(thresholds, "thresholds", "approval"),
         block_threshold=read_score(thresholds, "thresholds", "block"),
+        write_trigger_file_score=read_score(
+            scores,
+            "scores",
+            "write_trigger_file",
+            default=DEFAULT_WRITE_TRIGGER_FILE_SCORE,
+        ),
+        trigger_files=read_trigger_files(data.get("trigger_files", [])),
     )
 
     if not (

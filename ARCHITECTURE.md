@@ -122,6 +122,8 @@ classDiagram
 | A confirmed leak sets the score to the maximum instead of adding to it | A confirmed leak is always the worst case, whatever came before | Less detail between very risky sequences |
 | Frozen dataclasses for actions | The action history cannot be changed after the fact | Changing data requires creating new objects |
 | Standard library only at runtime | Easy to install and audit; small attack surface | More code written by hand, such as validation |
+| Writing an execution-trigger file needs approval, not an automatic block | Developers sometimes ask an agent to set up editor tasks or CI on purpose | A person must review each such write |
+| The trigger-file catalog lives in the policy, not in the code | Each organization can add the files its own tools run | A file missing from the catalog is a blind spot |
 
 ## 8. Threat model: sandbox escape
 

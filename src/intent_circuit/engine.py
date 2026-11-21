@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from .policy import SecurityPolicy, load_policy
+from .policy import SecurityPolicy, TriggerFile, load_policy
 
 POLICY_PATH_ENV_VAR = "INTENTCIRCUIT_POLICY_PATH"
 
@@ -55,6 +55,17 @@ def decision_from_score(
     return "ALLOW"
 
 
+def find_trigger_file(
+    path: str,
+    trigger_files: tuple[TriggerFile, ...],
+) -> TriggerFile | None:
+    for trigger_file in trigger_files:
+        if trigger_file.matches(path):
+            return trigger_file
+
+    return None
+
+
 def evaluate_sequence(
     actions: list[AgentAction],
     policy: SecurityPolicy | None = None,
@@ -87,6 +98,19 @@ def evaluate_sequence(
         if action.name == "delete_file":
             risk_score += active_policy.delete_file_score
             reasons.append(f"File deletion was requested: {action.resource}.")
+
+        if action.name == "write_file":
+            trigger_file = find_trigger_file(
+                action.resource,
+                active_policy.trigger_files,
+            )
+
+            if trigger_file is not None:
+                risk_score += active_policy.write_trigger_file_score
+                reasons.append(
+                    f"Wrote an execution-trigger file: {action.resource} "
+                    f"({trigger_file.reason})."
+                )
 
     risk_score = min(risk_score, 100)
     decision = decision_from_score(risk_score, active_policy)
