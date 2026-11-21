@@ -20,7 +20,7 @@ A live demo is only convincing once the detection has been measured.
 
 - [x] Richer actions: `write_file`, `run_command` with arguments, `network_request`
 - [x] A catalog of execution-trigger files (`.vscode/tasks.json`, `.git/hooks`, `.git/config`, `.venv`, CI workflows, agent hook files), each linked to a documented incident
-- [ ] Provenance: remember which files the agent wrote, and block writing a trigger file followed by running it
+- [x] Provenance: remember which files the agent wrote, and block writing a trigger file followed by running it
 - [ ] Judge commands by their arguments, not their name: `git -c`, `core.hooksPath`, the Docker socket, cloud metadata, `chmod`, `mount`, `sudo`
 
 ## Phase 2: Prove it with numbers

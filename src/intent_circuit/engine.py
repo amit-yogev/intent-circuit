@@ -66,6 +66,11 @@ def find_trigger_file(
     return None
 
 
+def program_name(resource: str) -> str:
+    name = resource.replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.removesuffix(".exe")
+
+
 def evaluate_sequence(
     actions: list[AgentAction],
     policy: SecurityPolicy | None = None,
@@ -73,6 +78,7 @@ def evaluate_sequence(
     active_policy = policy or load_policy(default_policy_path())
 
     sensitive_resources: set[str] = set()
+    armed_triggers: dict[str, TriggerFile] = {}
     reasons: list[str] = []
     risk_score = 0
 
@@ -106,11 +112,24 @@ def evaluate_sequence(
             )
 
             if trigger_file is not None:
+                armed_triggers[action.resource] = trigger_file
                 risk_score += active_policy.write_trigger_file_score
                 reasons.append(
                     f"Wrote an execution-trigger file: {action.resource} "
                     f"({trigger_file.reason})."
                 )
+
+        if action.name == "run_command":
+            program = program_name(action.resource)
+
+            for path, trigger_file in list(armed_triggers.items()):
+                if program in trigger_file.activated_by:
+                    del armed_triggers[path]
+                    risk_score += active_policy.trigger_activation_score
+                    reasons.append(
+                        f"Ran {program} after writing {path}, which {program} "
+                        "runs automatically: a trap was set and then triggered."
+                    )
 
     risk_score = min(risk_score, 100)
     decision = decision_from_score(risk_score, active_policy)

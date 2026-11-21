@@ -7,12 +7,14 @@ from typing import Any
 from .errors import InvalidPolicyError
 
 DEFAULT_WRITE_TRIGGER_FILE_SCORE = 60
+DEFAULT_TRIGGER_ACTIVATION_SCORE = 40
 
 
 @dataclass(frozen=True)
 class TriggerFile:
     pattern: str
     reason: str
+    activated_by: tuple[str, ...] = ()
 
     def matches(self, path: str) -> bool:
         normalized = path.replace("\\", "/").lower()
@@ -37,6 +39,7 @@ class SecurityPolicy:
     approval_threshold: int
     block_threshold: int
     write_trigger_file_score: int = DEFAULT_WRITE_TRIGGER_FILE_SCORE
+    trigger_activation_score: int = DEFAULT_TRIGGER_ACTIVATION_SCORE
     trigger_files: tuple[TriggerFile, ...] = ()
 
 
@@ -82,7 +85,23 @@ def read_trigger_files(value: Any) -> tuple[TriggerFile, ...]:
         if not isinstance(reason, str) or not reason:
             raise InvalidPolicyError(f"Trigger file #{index} needs a 'reason'.")
 
-        trigger_files.append(TriggerFile(pattern=pattern, reason=reason))
+        activated_by = item.get("activated_by", [])
+
+        if not isinstance(activated_by, list) or not all(
+            isinstance(program, str) and program for program in activated_by
+        ):
+            raise InvalidPolicyError(
+                f"Trigger file #{index}: 'activated_by' must be a list of "
+                "program names."
+            )
+
+        trigger_files.append(
+            TriggerFile(
+                pattern=pattern,
+                reason=reason,
+                activated_by=tuple(program.lower() for program in activated_by),
+            )
+        )
 
     return tuple(trigger_files)
 
@@ -128,6 +147,12 @@ def load_policy(policy_path: str | Path) -> SecurityPolicy:
             "scores",
             "write_trigger_file",
             default=DEFAULT_WRITE_TRIGGER_FILE_SCORE,
+        ),
+        trigger_activation_score=read_score(
+            scores,
+            "scores",
+            "trigger_activation",
+            default=DEFAULT_TRIGGER_ACTIVATION_SCORE,
         ),
         trigger_files=read_trigger_files(data.get("trigger_files", [])),
     )

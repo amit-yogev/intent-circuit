@@ -26,6 +26,7 @@ IntentCircuit looks at the whole sequence of actions and the intent behind it.
 - Fails closed: unknown or malformed input is rejected, never silently allowed
 - Understands file writes, commands with their arguments, and network requests
 - Flags writes to execution-trigger files, such as `.vscode/tasks.json`, Git hooks and CI workflows, for human approval
+- Blocks a trap that is set and then triggered: for example, the agent writes a Git hook and then runs `git`
 - Automated tests run on every pull request
 
 **Status:** early prototype. Detecting sandbox-escape intent (execution-trigger
