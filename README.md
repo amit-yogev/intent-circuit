@@ -130,31 +130,42 @@ $env:INTENTCIRCUIT_POLICY_PATH = "config/my_policy.json"
 
 ## Benchmark
 
-`benchmark/cases.json` holds 32 labelled cases: escapes that must be stopped
+`benchmark/cases.json` holds 45 labelled cases: escapes that must be stopped
 and ordinary developer work that must not be. Run them all:
 
 ```powershell
 python -m src.intent_circuit.benchmark
 ```
 
-| Cases | Result |
-|---|---|
-| Escape techniques documented in 2026 | 13 of 13 stopped |
-| Variants written before running them, with no rule tuned to fit | 4 of 9 stopped |
-| Ordinary developer work | 8 of 10 allowed |
+The same cases also run through a baseline: a permission list that checks
+program names only, the kind of control the 2026 escapes went through.
 
-The misses and false alarms are listed on purpose, and the tests check that
-list, so any change to it is visible:
+| Cases | IntentCircuit | Name-only list |
+|---|---|---|
+| Escape techniques documented in 2026 | 13 of 13 stopped | 0 of 13 |
+| Variants of those techniques | 8 of 9 stopped | 2 of 9 |
+| Held-out escapes | 3 of 9 stopped | 3 of 9 |
+| Ordinary developer work | 8 of 10 allowed | 10 of 10 |
+| Held-out ordinary work | 4 of 4 allowed | 2 of 4 |
 
-- **Missed:** the metadata service written as IPv6 or as one decimal number, a
-  Git hook written by a shell command, a Git setting hidden in an environment
-  variable, and setuid set with a number (`chmod 4755`).
-- **False alarms:** asking the agent to add a CI workflow or to change editor
-  settings. These are the cost of treating every trigger-file write as risky.
+How to read these numbers:
 
-These cases were written by the same person who wrote the rules, so the
-documented cases mainly show that the rules cover the known techniques. The
-variants are the more honest measure.
+- The rules were written for the documented techniques, so 13 of 13 shows
+  coverage, not general detection.
+- The variants exposed five misses. Four were fixed by general changes
+  (addresses written one way, the program behind `env`, numeric setuid), so
+  8 of 9 is measured after fixing and is optimistic.
+- The held-out cases were committed before any fix (0 of 9 stopped at that
+  commit) and no rule was written for them. **3 of 9 is the honest measure of
+  how the fixes generalize.**
+- The name-only list stops none of the documented escapes, but it stops some
+  that IntentCircuit misses, such as Git run through `sh -c` or `nohup`. The
+  two are meant to be used together.
+
+Still missed: the metadata address in hexadecimal or as IPv4-mapped IPv6,
+`chmod 04755`, programs started through `nohup` or a shell string, and cloud
+metadata services that have no rule (Alibaba Cloud). False alarms: asking the
+agent to add a CI workflow or to change editor settings.
 
 ## Error handling
 
