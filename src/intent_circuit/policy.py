@@ -1,4 +1,5 @@
 import json
+import posixpath
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
@@ -18,11 +19,7 @@ class TriggerFile:
     activated_by: tuple[str, ...] = ()
 
     def matches(self, path: str) -> bool:
-        normalized = path.replace("\\", "/").lower()
-
-        if normalized.startswith("./"):
-            normalized = normalized[2:]
-
+        normalized = posixpath.normpath(path.replace("\\", "/").lower())
         pattern = self.pattern.lower()
 
         return fnmatchcase(normalized, pattern) or fnmatchcase(
