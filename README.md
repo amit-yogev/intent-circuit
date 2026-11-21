@@ -127,6 +127,35 @@ change. To use a different policy file, set an environment variable:
 $env:INTENTCIRCUIT_POLICY_PATH = "config/my_policy.json"
 ```
 
+
+## Benchmark
+
+`benchmark/cases.json` holds 32 labelled cases: escapes that must be stopped
+and ordinary developer work that must not be. Run them all:
+
+```powershell
+python -m src.intent_circuit.benchmark
+```
+
+| Cases | Result |
+|---|---|
+| Escape techniques documented in 2026 | 13 of 13 stopped |
+| Variants written before running them, with no rule tuned to fit | 4 of 9 stopped |
+| Ordinary developer work | 8 of 10 allowed |
+
+The misses and false alarms are listed on purpose, and the tests check that
+list, so any change to it is visible:
+
+- **Missed:** the metadata service written as IPv6 or as one decimal number, a
+  Git hook written by a shell command, a Git setting hidden in an environment
+  variable, and setuid set with a number (`chmod 4755`).
+- **False alarms:** asking the agent to add a CI workflow or to change editor
+  settings. These are the cost of treating every trigger-file write as risky.
+
+These cases were written by the same person who wrote the rules, so the
+documented cases mainly show that the rules cover the known techniques. The
+variants are the more honest measure.
+
 ## Error handling
 
 | Problem | Example message |
@@ -145,9 +174,11 @@ Every error exits with code `1`, so other tools and CI pipelines can detect it.
 | `src/intent_circuit/policy.py` | Loads and validates the security policy and its rules |
 | `src/intent_circuit/runner.py` | Command-line tool: reads a scenario file and saves a report |
 | `src/intent_circuit/errors.py` | Error types for invalid scenarios and policies |
+| `src/intent_circuit/benchmark.py` | Runs every benchmark case and prints the results |
 | `src/intent_circuit/main.py` | Demonstration scenarios |
 | `config/default_policy.json` | The default security policy |
 | `examples/` | Scenario files, including sandbox-escape attempts |
+| `benchmark/cases.json` | Labelled escape and ordinary-work cases |
 | `tests/` | Automated tests |
 | `.github/workflows/tests.yml` | Runs the tests on every pull request |
 

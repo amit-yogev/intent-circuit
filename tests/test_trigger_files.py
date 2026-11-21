@@ -37,6 +37,10 @@ def test_writing_an_editor_task_needs_approval() -> None:
         ".venv/Scripts/python.exe",
         ".venv/bin/python3",
         ".claude/settings.local.json",
+        "src/../.vscode/tasks.json",
+        ".vscode/x/../tasks.json",
+        ".vscode/./tasks.json",
+        ".vscode//tasks.json",
     ],
 )
 def test_trigger_files_are_recognized(path: str) -> None:
@@ -52,6 +56,7 @@ def test_trigger_files_are_recognized(path: str) -> None:
         "src/app.py",
         "docs/vscode-tasks.md",
         ".venv/lib/site-packages/requests/__init__.py",
+         ".vscode/../src/app.py",
     ],
 )
 def test_ordinary_files_are_allowed(path: str) -> None:
