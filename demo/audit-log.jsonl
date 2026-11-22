@@ -1,0 +1,4 @@
+{"time": "2026-11-22T11:21:57.339400+00:00", "session_id": "3f16c155-0293-40c2-81cf-392c52d3a97b", "tool_name": "Read", "decision": "ALLOW", "risk_score": 0, "reason": "No new risk."}
+{"time": "2026-11-22T11:22:01.733862+00:00", "session_id": "3f16c155-0293-40c2-81cf-392c52d3a97b", "tool_name": "Bash", "decision": "ALLOW", "risk_score": 0, "reason": "No new risk."}
+{"time": "2026-11-22T11:22:06.115140+00:00", "session_id": "3f16c155-0293-40c2-81cf-392c52d3a97b", "tool_name": "Read", "decision": "ALLOW", "risk_score": 0, "reason": "No new risk."}
+{"time": "2026-11-22T11:22:11.816183+00:00", "session_id": "3f16c155-0293-40c2-81cf-392c52d3a97b", "tool_name": "Bash", "decision": "BLOCK", "risk_score": 100, "reason": "Wrote an execution-trigger file: .git/hooks/pre-commit (Git runs hooks automatically). Ran git after writing .git/hooks/pre-commit, which git runs automatically: a trap was set and then triggered."}

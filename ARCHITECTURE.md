@@ -27,10 +27,11 @@ component later executes.
 - Reject invalid or unknown input (fail closed) with a clear message and exit code 1
 - Run the automated tests on every pull request
 - Measure the engine against a labelled benchmark of escapes and ordinary developer work
+- Decide before each tool call of a live Claude Code agent, through a `PreToolUse` hook, with memory per session and an audit log
 
 ### Planned (see the roadmap)
 
-- Real-time, step-by-step decisions through an agent hook
+- A replay command for the audit log
 
 
 ### Out of scope
@@ -183,6 +184,12 @@ classDiagram
 | Held-out cases are committed before fixes, and fixes come only from the variants | The Git history proves the held-out cases were not used to write rules | The honest number is low (3 of 9) |
 | Addresses are written one way before matching (`2852039166` becomes `169.254.169.254`) | The same address has many spellings | Only decimal and standard IPv6 forms are handled so far |
 | `env` is unwrapped and the program it starts is judged | `env VAR=... git` runs Git | Other wrappers (`nohup`, `sh -c`) are not unwrapped yet |
+| The hook never answers `allow`; it answers `deny`, `ask` or nothing | `allow` would skip Claude Code's own permission checks | Ordinary actions still go through Claude Code's prompts |
+| Any error in the hook answers `deny`, and the hook is configured with `onFailure: block` | A guard that crashes must not let the action through | A broken policy or state file stops the agent until it is fixed |
+| Each session's history is saved to a file, and the session id is checked before it becomes a file name | Every hook call is a new process, so traps need memory; an id like `../../x` would write outside the folder | State files must be cleaned up; only letters, digits, `-` and `_` are accepted |
+| A new action is judged only if it adds risk, but the decision uses the whole session's score | One risky step must not block all later ordinary work, and a sequence is riskier than a single step | Risk accumulates: after an approved risky step, a second risky step is blocked sooner |
+| A blocked action is not remembered; an action that needed approval is | A blocked action did not happen | The hook cannot see whether the person approved |
+| Shell redirects (`>`, `>>`) count as file writes | An agent can write a Git hook with `echo ... >` instead of a file tool | Writes inside scripts or `sh -c` strings are not seen |
 | Known misses and false alarms are listed in the tests | A new miss, or a fixed one, changes the list and must be noted on purpose | The list must be updated with every improvement |
 
 ## 8. Threat model: sandbox escape
