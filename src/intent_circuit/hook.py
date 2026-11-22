@@ -15,7 +15,7 @@ from .policy import SecurityPolicy, load_policy
 COMMAND_TOOLS = frozenset({"Bash", "PowerShell"})
 WRITE_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
 COMMAND_SEPARATORS = frozenset({"&&", "||", ";", "|", "&"})
-
+REDIRECTS = frozenset({">", ">>"})
 STATE_DIR_ENV_VAR = "INTENTCIRCUIT_STATE_DIR"
 SAFE_SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 
@@ -43,16 +43,28 @@ def split_commands(command: str) -> list[list[str]]:
     return [words for words in commands if words]
 
 
+def redirected_writes(words: list[str]) -> list[AgentAction]:
+    return [
+        AgentAction(name="write_file", resource=target)
+        for symbol, target in zip(words, words[1:])
+        if symbol in REDIRECTS
+    ]
+
 def actions_from_tool_call(
     tool_name: str, tool_input: dict[str, Any]
 ) -> list[AgentAction]:
     if tool_name in COMMAND_TOOLS:
-        return [
-            AgentAction(
-                name="run_command", resource=words[0], args=tuple(words[1:])
+        actions = []
+
+        for words in split_commands(str(tool_input.get("command", ""))):
+            actions.extend(redirected_writes(words))
+            actions.append(
+                AgentAction(
+                    name="run_command", resource=words[0], args=tuple(words[1:])
+                )
             )
-            for words in split_commands(str(tool_input.get("command", "")))
-        ]
+
+        return actions
 
     if tool_name in WRITE_TOOLS:
         path = str(tool_input.get("file_path", ""))

@@ -58,3 +58,20 @@ def test_read_and_web_fetch_are_translated() -> None:
 
 def test_tools_that_change_nothing_are_not_judged() -> None:
     assert actions_from_tool_call("Grep", {"pattern": "TODO"}) == []
+    
+
+def test_shell_redirect_counts_as_a_file_write() -> None:
+    actions = actions_from_tool_call(
+        "Bash", {"command": "echo 'python lint.py' > .git/hooks/pre-commit"}
+    )
+
+    assert actions[0] == AgentAction(
+        name="write_file", resource=".git/hooks/pre-commit"
+    )
+    assert actions[1].name == "run_command"
+
+
+def test_appending_redirect_counts_too() -> None:
+    actions = actions_from_tool_call("Bash", {"command": "echo x >> notes.txt"})
+
+    assert AgentAction(name="write_file", resource="notes.txt") in actions

