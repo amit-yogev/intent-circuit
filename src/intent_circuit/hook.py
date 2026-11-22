@@ -50,6 +50,7 @@ def redirected_writes(words: list[str]) -> list[AgentAction]:
         if symbol in REDIRECTS
     ]
 
+
 def actions_from_tool_call(
     tool_name: str, tool_input: dict[str, Any]
 ) -> list[AgentAction]:
@@ -180,6 +181,7 @@ def handle_call(call: dict[str, Any], policy: SecurityPolicy) -> dict[str, Any] 
             "decision": decision,
             "risk_score": risk_score,
             "reason": reason,
+            "actions": [asdict(action) for action in new_actions],
         }
     )
 

@@ -28,10 +28,11 @@ component later executes.
 - Run the automated tests on every pull request
 - Measure the engine against a labelled benchmark of escapes and ordinary developer work
 - Decide before each tool call of a live Claude Code agent, through a `PreToolUse` hook, with memory per session and an audit log
+- Replay the audit log as a timeline, and decide it again with another policy
 
 ### Planned (see the roadmap)
 
-- A replay command for the audit log
+- Finer Git hook activation (a `pre-commit` hook runs on `git commit`, not on every `git` command)
 
 
 ### Out of scope
@@ -190,6 +191,7 @@ classDiagram
 | A new action is judged only if it adds risk, but the decision uses the whole session's score | One risky step must not block all later ordinary work, and a sequence is riskier than a single step | Risk accumulates: after an approved risky step, a second risky step is blocked sooner |
 | A blocked action is not remembered; an action that needed approval is | A blocked action did not happen | The hook cannot see whether the person approved |
 | Shell redirects (`>`, `>>`) count as file writes | An agent can write a Git hook with `echo ... >` instead of a file tool | Writes inside scripts or `sh -c` strings are not seen |
+| The audit log stores the actions, and replay decides them again with the same `decide` function | A policy change can be tested on real past sessions before it is used | Older log lines without actions cannot be decided again |
 | Known misses and false alarms are listed in the tests | A new miss, or a fixed one, changes the list and must be noted on purpose | The list must be updated with every improvement |
 
 ## 8. Threat model: sandbox escape
