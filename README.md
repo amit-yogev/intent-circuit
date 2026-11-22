@@ -235,6 +235,25 @@ that environment's Python:
 Decisions are written to `intent-circuit/audit.jsonl` in the system's
 temporary folder. Set `INTENTCIRCUIT_STATE_DIR` to choose another folder.
 
+### Replay
+
+Show every session in the audit log as a timeline:
+
+```powershell
+python -m intent_circuit.replay --log demo/audit-log.jsonl
+```
+
+Decide every session again with another policy, to see what a policy change
+would have changed before you make it:
+
+```powershell
+python -m intent_circuit.replay --policy config/my_policy.json
+```
+
+Lines that would get a different decision are marked
+`-> with this policy: BLOCK`. Only log lines written since the replay command
+was added store their actions, so older lines are shown but not decided again.
+
 ### Limits
 
 - Any `git` command counts as running a Git hook, even though `git status` does

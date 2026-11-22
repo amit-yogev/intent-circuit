@@ -35,7 +35,7 @@ A live demo is only convincing once the detection has been measured.
 - [x] Decide before each step instead of after the fact
 - [x] Connect to a real coding agent through a hook that runs before every tool call
 - [x] Audit log of every decision
-- [ ] Replay command for the audit log
+- [x] Replay command for the audit log
 
 ## Phase 4: Demo and packaging
 
