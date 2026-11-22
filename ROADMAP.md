@@ -32,9 +32,10 @@ A live demo is only convincing once the detection has been measured.
 
 ## Phase 3: Real-time guard
 
-- [ ] Decide before each step instead of after the fact
-- [ ] Connect to a real coding agent through a hook that runs before every tool call
-- [ ] Audit log and a replay command
+- [x] Decide before each step instead of after the fact
+- [x] Connect to a real coding agent through a hook that runs before every tool call
+- [x] Audit log of every decision
+- [ ] Replay command for the audit log
 
 ## Phase 4: Demo and packaging
 
