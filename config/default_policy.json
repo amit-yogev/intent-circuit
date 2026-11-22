@@ -108,7 +108,7 @@
       "reason": "the cloud metadata service hands out credentials",
       "score": 90
     },
-        {
+    {
       "host": "fd00:ec2::254",
       "reason": "the cloud metadata service hands out credentials",
       "score": 90
