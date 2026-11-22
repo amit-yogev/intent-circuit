@@ -33,6 +33,12 @@ IntentCircuit looks at the whole sequence of actions and the intent behind it.
 - Writes every decision to an audit log
 - Automated tests run on every pull request
 
+## Demo
+
+
+https://github.com/user-attachments/assets/c2b28c0e-df44-4284-a6c3-28ed6f851824
+
+
  **Status:** early prototype. The rules run on recorded action sequences and,
 through a Claude Code hook, before every tool call of a live agent. They are
 measured on 45 labelled cases (see [Benchmark](#benchmark)). Next: a replay
